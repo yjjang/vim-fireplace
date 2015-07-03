@@ -285,7 +285,9 @@ function! s:repl.piggieback(arg, ...) abort
   else
     let arg = ' ' . a:arg
   endif
-  let response = connection.eval('(cemerick.piggieback/cljs-repl'.arg.')')
+  "let response = connection.eval('(cemerick.piggieback/cljs-repl'.arg.')')
+   call connection.eval("(require 'figwheel-sidecar.repl-api)")
+   let response = connection.eval('(figwheel-sidecar.repl-api/cljs-repl)')
 
   if empty(get(response, 'ex'))
     call insert(self.piggiebacks, extend({'connection': connection}, deepcopy(s:piggieback)))
