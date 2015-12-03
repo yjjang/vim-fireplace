@@ -277,17 +277,21 @@ function! s:repl.piggieback(arg, ...) abort
 
   let connection = s:conn_try(self.connection, 'clone')
   if empty(a:arg)
-    let arg = ''
+    let arg = '(cljs.repl.rhino/repl-env)'
   elseif a:arg =~# '^\d\{1,5}$'
-    call connection.eval("(require 'cljs.repl.browser)")
+    let replns = 'weasel.repl.websocket'
+    if has_key(connection.eval("(require '" . replns . ")"), 'ex')
+      let replns = 'cljs.repl.browser'
+      call connection.eval("(require '" . replns . ")")
+    endif
     let port = matchstr(a:arg, '^\d\{1,5}$')
-    let arg = ' (cljs.repl.browser/repl-env :port '.port.')'
+    let arg = '('.replns.'/repl-env :port '.port.')'
   else
-    let arg = ' ' . a:arg
+    let arg = a:arg
   endif
-  "let response = connection.eval('(cemerick.piggieback/cljs-repl'.arg.')')
-   call connection.eval("(require 'figwheel-sidecar.repl-api)")
-   let response = connection.eval('(figwheel-sidecar.repl-api/cljs-repl)')
+  "let response = connection.eval('(cemerick.piggieback/cljs-repl'.' '.arg.')')
+  call connection.eval("(require 'figwheel-sidecar.repl-api)")
+  let response = connection.eval('(figwheel-sidecar.repl-api/cljs-repl)')
 
   if empty(get(response, 'ex'))
     call insert(self.piggiebacks, extend({'connection': connection}, deepcopy(s:piggieback)))
@@ -799,6 +803,14 @@ function! fireplace#session_eval(expr, ...) abort
       call setloclist(nr, fireplace#quickfix_for(response.stacktrace))
     endif
   endif
+
+  try
+    silent doautocmd User FireplaceEvalPost
+  catch
+    echohl ErrorMSG
+    echomsg v:exception
+    echohl NONE
+  endtry
 
   call s:output_response(response)
 
